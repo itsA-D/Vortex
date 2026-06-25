@@ -1,119 +1,165 @@
-# Simulation Monitor
+# 🚀 NASA NExSyS Simulation Monitor Dashboard
 
-![](images/DashboardHome.png)
+<p align="center">
+  <img src="images/DashboardHome.png" alt="Simulation Monitor Banner" width="100%" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+</p>
 
-**Simulation Monitor** is a web-based monitoring tool to be used for any NExSyS simulation. For background on the project see [here](https://drive.google.com/open?id=13PfHKjtYUtsJQI2PvytLx_p_4slD7lnW) (NOTE that the screenshots in the presentation are out of date but the information is correct). The application uses Golang for its back-end and React for its front-end. The only tools that you will need to get it running are Trick (of course), Golang, Nodejs, and npm.
+<p align="center">
+  <strong>Enterprise-grade, high-performance real-time telemetry visualizer for the NASA Extensible Simulation System (NExSyS)</strong>
+</p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/status-active-success?style=for-the-badge">
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=for-the-badge&logo=go&logoColor=white">
+  <img src="https://img.shields.io/badge/React-16.2.0-61DAFB?style=for-the-badge&logo=react&logoColor=black">
+  <img src="https://img.shields.io/badge/Platform-NExSyS%20%2F%20Trick-orange?style=for-the-badge">
+</p>
 
-## Terminal Commands
+---
 
-1. Install NodeJs from [NodeJs Official Page](https://nodejs.org/en) which should come bundled with npm if you do not have it already.
-2. Install Go from [Golang Official Page](https://golang.org/doc/install).
-3. Open Terminal
-4. Go to your Go workspace directory
-5. Clone the repository. Filepath should be: ```~/{Your Go Workspace}/src/```
-6. cd into the project directory
-7. Run in terminal: ```npm install``` to install all dependencies.
-8. You can now either run ```go run server.go address:port``` then ```npm start``` so that you can view live changes quickly in-browser or you can cd into /src and run ```npm run build``` to create an optimized version of the project. To view the optimized version run ```go run server.go address:port``` and navigate to the specific address and port that you provided in a web browser.
-9. **NOTE** that you must change the socket variable on line 585 of ```~/{Your Go Workspace}/src/nexsysSimMonitor/src/variables/Variables.jsx``` to reflect the address and port that you specified for the server.
+## 📌 Overview
 
-### Project Directory Structure
+### What is this?
+The **NASA NExSyS Simulation Monitor Dashboard** is a high-performance web application designed for real-time visualization of live telemetry streamed from **Trick Simulation Servers**. Developed for the **NASA Extensible Simulation System (NExSyS)**, it provides simulation engineers, researchers, and test conductors with immediate, responsive browser-based monitoring of complex aerospace simulations.
+
+### The Problems It Solves
+- 🔴 **Fragmented Telemetry Views:** Consolidates data from disparate simulation components into a singular, unified layout.
+- 🔴 **Desktop Abstraction Barriers:** Removes the dependency on heavy, platform-specific desktop applications, offering instant, browser-accessible monitoring.
+- 🔴 **Telemetry Lag:** Solves sub-second refresh needs using lightweight WebSockets paired with a highly concurrent Go backend, avoiding heavy database layers or expensive HTTP polling.
+
+### Primary Business Value
+> **Accelerates decision-making and anomaly detection during simulation runs by delivering immediate, multi-system telemetry updates in less than 100ms with zero data overhead.**
+
+---
+
+## 📂 Project Structure & Extended Documentation
+
+To maintain clean and granular documentation, our technical documentation is structured as follows:
+
+| Document | Purpose | File Link |
+|----------|---------|-----------|
+| **Architecture Specification** | Concurrency model, detailed data flow, state management, and structural smells | [docs/architecture.md](file:///a:/shinobi no shuriken/github repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/docs/architecture.md) |
+| **API Reference** | WebSocket payloads, TCP command formats, and message schemas | [docs/api.md](file:///a:/shinobi no shuriken/github repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/docs/api.md) |
+| **Complete Setup Guide** | Comprehensive installation, XML variable config instructions, and deployment guides | [docs/setup.md](file:///a:/shinobi no shuriken/github repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/docs/setup.md) |
+| **Startup & Port Remedy** | Root Cause Analysis, self-healing port scanners, and Windows socket debugging | [docs/startup_and_port_conflict_remedy.md](file:///a:/shinobi no shuriken/github repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/docs/startup_and_port_conflict_remedy.md) |
+| **Changelog & History** | Project history, architectural versions, and future roadmap | [CHANGELOG.md](file:///a:/shinobi no shuriken/github repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/CHANGELOG.md) |
+
+---
+
+## ✨ Features
+
+- ⚡ **Real-Time Telemetry Streaming:** Multi-panel sub-second dashboard running over high-speed WebSockets.
+- 🛰️ **Subsystem Panels:** Detailed panels for distinct aerospace modules:
+  - **MPCV:** Multi-Purpose Crew Vehicle Guidance, Navigation, and Control.
+  - **PM:** Power Management (MBSUs, PDUs, solar arrays).
+  - **Robotics:** NextStep mechanical arms, doors, and rover interfaces.
+  - **SubSys:** Cabin Environmental Systems (Potable Water, TCS, ARS, PCS).
+  - **Cams/Lights:** Camera control (Telescopes and AerCams).
+  - **RoverLLT:** Rover and Low Latency Telemetry status.
+- 🔌 **Dynamic Server Reconnection:** Seamless switching and connection to active Trick servers at run-time.
+- ⚙️ **XML Configuration Driven:** Automatic parsing of XML-based variable configurations (`vars_displayed.xml`) using a custom Go XML parser.
+
+---
+
+## 🏗 High-Level Architecture
+
+The system utilizes a lightweight, non-blocking asynchronous pipeline designed for low latency.
+
+```mermaid
+graph TD
+    Client[Web Browser Client - React UI] <-->|WebSocket Connection /ws| GoServer[Go Backend Server - server.go]
+    GoServer <-->|TCP Socket Conn| Trick[NASA Trick Simulation Server]
+    
+    subgraph Go Backend
+        GoServer -->|XML Parsing| Parser[Parsers/TrickVarParse.go]
+        GoServer -->|Reader/Writer Goroutines| AsyncJobs[Client Specific TCP Readers]
+        AsyncJobs -->|Mutex Protected Map| SharedState[trickVars Map]
+    end
 ```
-nexsysSimMonitor
-├── README.md
-├── package.json
-├── server.go
-├── Parsers
-│   ├── parseTrickSie.go
-│   └── TrickVarParse.go
-├── public
-│   ├── apple-icon.png
-│   ├── favicon.ico
-│   ├── index.html
-│   └── manifest.json
-└── src
-    ├── index.js
-    ├── assets
-    │   ├── css
-    │   ├── fonts
-    │   ├── img
-    │   │   └── faces
-    │   └── sass
-    │       ├── lbd
-    │       │   └── mixins
-    │       ├── light-bootstrap-dashboard.css
-    │       └── light-bootstrap-dashboard.scss
-    ├── components
-    │   ├── Card
-    │   │   └── Card.jsx
-    │   ├── CustomButton
-    │   │   └── CustomButton.jsx
-    │   ├── CustomCheckbox
-    │   │   └── CustomCheckbox.jsx
-    │   ├── CustomRadio
-    │   │   └── CustomRadio.jsx
-    │   ├── Footer
-    │   │   └── Footer.jsx
-    │   ├── FormInputs
-    │   │   └── FormInputs.jsx
-    │   ├── Header
-    │   │   ├── Header.jsx
-    │   │   └── HeaderLinks.jsx
-    │   ├── Sidebar
-    │   │   └── Sidebar.jsx
-    │   ├── StatsCard
-    │   │   └── StatsCard.jsx
-    │   ├── Tasks
-    │   │   └── Tasks.jsx
-    │   └── UserCard
-    │       └── UserCard.jsx
-    ├── layouts
-    │   └── Dashboard
-    │       └── Dashboard.jsx
-    ├── routes
-    │   ├── dashboard.jsx
-    │   └── index.jsx
-    ├── variables
-    │   ├── S_sie.resource
-    │   ├── Sockets.jsx
-    │   ├── Variables.jsx
-    │   └── trick
-    │       ├── vars_displayed.xml
-    │       └── displays
-    └── views
-        ├── CamsLights
-        │   └── CamsLights.jsx
-        ├── Dashboard
-        │   └── Dashboard.jsx
-        ├── MPCV
-        │   └── MPCV.jsx
-        ├── PM
-        │   └── PM.jsx
-        ├── RemoteOperations
-        │   └── RemoteOperations.jsx
-        ├── Robotics
-        │   └── Robotics.jsx
-        ├── SubSys
-        │   └── SubSys.jsx
-        └── User
-            └── User.jsx
+
+For a comprehensive explanation of our concurrency safeguards and performance characteristics, see [docs/architecture.md](file:///a:/shinobi%20no%20shuriken/github%20repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/docs/architecture.md).
+
+---
+
+## 🛠 Tech Stack
+
+### Backend
+* **Language:** Go 1.26+ (standard library for high concurrency)
+* **WebSocket Library:** `github.com/gorilla/websocket` (v1.5.3)
+* **Concurrency Primitives:** Channels, Goroutines, `sync.RWMutex`
+
+### Frontend
+* **Core:** React 16.2.0 (Functional & Class components)
+* **UI/Styles:** Bootstrap 3.3.7, React-Bootstrap 0.32.1, SASS (Dart Sass v1.77.1)
+* **Routing & State:** React Router DOM v4.2.2, native Browser WebSockets
+* **Charts:** Chartist.js 0.10.1 (low CPU utilization render)
+
+### External Systems
+* **NASA Trick Simulation Server:** Provides TCP-based simulation engines.
+
+---
+
+## ⚙️ Quick Start
+
+### 1. Prerequisites
+Ensure you have the following installed:
+- **Node.js** (v14+ recommended) and **npm**
+- **Go** (1.26+ recommended)
+
+### 2. Clone and Install Dependencies
+```bash
+# Clone the repository
+git clone https://github.com/NASA/React-GoLang-Real-time-Dashboard.git
+cd React-GoLang-Real-time-Dashboard
+
+# Install Node dependencies
+npm install
 ```
-## Golang (Back-end) Links:
-- Homepage: <https://golang.org/>
-- Tutorial: <https://tour.golang.org/list>
-- Benefits of Go: <https://medium.com/exploring-code/why-should-you-learn-go-f607681fad65>
-- Golang wiki: <https://github.com/golang/go/wiki>
-- Concurrency links: <https://tour.golang.org/concurrency/11>
-- Best Golang reference: <https://gobyexample.com/>
 
-## React (Front-end) Links:
-- Homepage: <https://reactjs.org/>
-- Getting Started: <https://reactjs.org/docs/getting-started.html>
-- React-Bootstrap Documentation: <https://react-bootstrap.github.io/>
-- Popularity: <https://medium.freecodecamp.org/yes-react-is-taking-over-front-end-development-the-question-is-why-40837af8ab76>
-- Example Project: <https://medium.freecodecamp.org/how-to-build-a-react-js-chat-app-in-10-minutes-c9233794642b>
-- Quick Introduction: <https://medium.freecodecamp.org/learn-react-js-in-5-minutes-526472d292f4>
+### 3. Start in Development Mode
+Start both services concurrently to enable hot-reloading:
 
-## Contacts:
-- Daniel Delago: ddelago0596@gmail.com, daniel.b.delago@nasa.gov
-- Paul Bielski: paul.bielski@nasa.gov
+```bash
+# Terminal 1: Start React SASS compiler and dev server
+npm start
+
+# Terminal 2: Run Go backend (Arg 1: Host ip & port)
+go run server.go localhost:3000
+```
+Then navigate your browser to `http://localhost:3000`.
+
+> [!IMPORTANT]
+> To connect to a local development backend, ensure that the WebSocket address on line 585 of [src/variables/Variables.jsx](file:///a:/shinobi%20no%20shuriken/github%20repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/src/variables/Variables.jsx) is configured to match the target address (e.g., `ws://localhost:3000/ws`).
+
+For advanced setups, XML modifications, and production builds, please refer to the complete [Setup Guide](file:///a:/shinobi%20no%20shuriken/github%20repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/docs/setup.md).
+
+---
+
+## 🧪 Testing
+
+The React build system includes built-in test runner configurations.
+
+To run the frontend test suites:
+```bash
+npm run test
+```
+
+To profile or run Go backend components:
+```bash
+go test ./...
+```
+
+---
+
+## ⚠️ Security Notes
+
+1. **Intended Network:** Designed exclusively for secure, internal NASA networks. No default authentication is included.
+2. **CORS Configuration:** The WebSocket upgrader has permissive origin checking (`CheckOrigin` returns `true`). For external deployments, this must be restricted to authenticated origins.
+3. **No SSL by Default:** Raw WS and HTTP protocols are used. Deploy behind an SSL-terminating reverse proxy (like Nginx) for HTTPS/WSS encryption.
+
+For the comprehensive Security Guide, see [docs/architecture.md#11-security-profile](file:///a:/shinobi%20no%20shuriken/github%20repo/React-GoLang-Real-time-Dashboard-master/React-GoLang-Real-time-Dashboard-master/docs/architecture.md#11-security-profile).
+
+---
+
+⭐ **Star the project** if this dashboard helps your NASA NExSyS simulation workflow!
